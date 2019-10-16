@@ -9,7 +9,12 @@ let chessBoard = null
 let colors = ['white', 'red']
 let curUser = null
 io.on('connection', socket => {
+  console.log('new connection>>>')
+  socket.on('test', data => {
+    console.log('test>>>>', data)
+  })
   socket.on('login', data => {
+    console.log('login>>>', data)
     const {username, userid} = data
     if(username && userid) {
       maxUser ++
@@ -28,7 +33,8 @@ io.on('connection', socket => {
     }
   })
   socket.on('disconnect', () => {
-    sendSystemMessage(`${username}离开房间`)
+    console.log('disconnect>>>>>>>')
+    sendSystemMessage(`${socket.username}离开房间`)
     delete currentUsers[socket.username]
   })
 

@@ -1,5 +1,6 @@
 <html>
   <head>
+    <meta charset='utf-8'>
     <link rel="stylesheet" href="chess.css">
   </head>
   <body>
@@ -22,13 +23,12 @@
       </div>
     </div>
   </body>
-  <script src="chessboard.js"></script>
   <script src='chat.js'></script>
   <script src="draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
   <script>
     addEventListener('load', function() {
-      let socket = io('http://www.howieliu.com:3000');
+      let socket = io('https://www.howieliu.com/socket.io/');
       let {username, userid} = checkLogin()
       if(username && userid) {
         socket.emit('login', {username, userid})
@@ -36,6 +36,8 @@
         username = null
         userid = null
       }
+      console.log('hhhhhh', socket.emit)
+      socket.emit('test', 'hello')
       const $cvs = document.getElementById('myCanvas')
       const $loginPage = document.getElementsByClassName('login')[0]
       const $btnReady = document.getElementById('btnReady')
@@ -78,7 +80,6 @@
       })
       drawer.initChessBoard();
       const {sept, curX, curY, xNum, yNum} = drawer;
-      const chessboard = new ChessBoard(xNum, yNum, 'a', 'b');
 
       function getReady() {
         const {xNum, yNum} = drawer;
@@ -130,12 +131,15 @@
       $cvs.addEventListener('mousemove', throttle(handleMouseMove, 300))
 
       addEventListener('keydown', function(e) {
-        console.log('keydown', e)
         if(e.which === 13) {
           if(username) {   //聊天消息
             sendMsg()
           } else {  //发送登陆消息
-
+            const username = document.querySelector('.usernameInput').value.trim()
+            if(username) {
+              console.log('username>>>>>>', username)
+              socket.emit('login', {username})
+            }
           }
         }
       })
