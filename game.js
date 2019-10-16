@@ -8,6 +8,7 @@ let readyPool = []
 let chessBoard = null
 let colors = ['white', 'red']
 let curUser = null
+const roomName = 'room 237'
 io.on('connection', socket => {
   console.log('new connection>>>')
   socket.on('test', data => {
@@ -29,6 +30,7 @@ io.on('connection', socket => {
         username: username,
         userid: currentUsers[username]
       })
+    //  socket.join(roomName, () => {});
       sendSystemMessage(`${username}进入房间`)
     }
   })
@@ -39,6 +41,7 @@ io.on('connection', socket => {
   })
 
   socket.on('ready', data => {
+    console.log('ready>>>', data)
     const {username, xNum, yNum} = data
     if(readyPool.length < 2) {
       readyPool.push(username)
@@ -77,6 +80,7 @@ io.on('connection', socket => {
   })
 
   socket.on('put chess', data => {
+    console.log('put chess>>>', data)
     const {x, y, username} = data
     if(readyPool.indexOf(username) > -1) {
       if(chessBoard.putChess(x, y, currentUsers[username])) {
@@ -104,20 +108,22 @@ io.on('connection', socket => {
   })
 
   socket.on('new message', data => {
+    console.log('new message', data)
     const {message, username, userid} = data
     sendBroadcast(username, userid, message)
   })
 
   function sendSystemMessage(message) {
-    sendBroadcast({
-      username: '系统消息',
-      userid: 9999,
+    sendBroadcast(
+      '系统消息',
+      9999,
       message
-    })
+    )
   }
 
   function sendBroadcast(username, userid, message) {
-    socket.broadcast.emit('new message', {
+    console.log('send new message', message)
+    io.emit('new message', {
       username,
       userid,
       message

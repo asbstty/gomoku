@@ -18,8 +18,8 @@ class Chat {
   }
 
   sendMessage(message) {
-    if(sendBox.value.trim()) {
-      sendBox.value = ''
+    if(this.sendBox.value.trim()) {
+      this.sendBox.value = ''
     }
   }
 

@@ -14,7 +14,7 @@
 
         </textarea>
       </div>
-      <button id='btnReady' onclick="getReady()"></button>
+      <button id='btnReady'></button>
       <div class="login page">
         <div class="form">
           <h3 class="title">取个名</h3>
@@ -28,7 +28,7 @@
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
   <script>
     addEventListener('load', function() {
-      let socket = io('https://www.howieliu.com/socket.io/');
+      let socket = io('https://www.howieliu.com');
       let {username, userid} = checkLogin()
       if(username && userid) {
         socket.emit('login', {username, userid})
@@ -42,7 +42,7 @@
       const $loginPage = document.getElementsByClassName('login')[0]
       const $btnReady = document.getElementById('btnReady')
       const drawer = new Drawer()
-      const chater = null
+      let chater = null
       let playHandler = {}
       let canPlay = false
       let gameStatus = 0
@@ -60,6 +60,7 @@
           return canPlay
         }
       })
+      playHandler.canPlay = false
       Object.defineProperty(playHandler, 'gameStatus', {
         set: function(status) {
           gameStatus = status
@@ -78,9 +79,10 @@
           return gameStatus
         }
       })
+      playHandler.gameStatus = 0
       drawer.initChessBoard();
       const {sept, curX, curY, xNum, yNum} = drawer;
-
+      $btnReady.addEventListener('click', getReady)
       function getReady() {
         const {xNum, yNum} = drawer;
         if(playHandler.gameStatus == 0) {
@@ -163,12 +165,13 @@
         const sendBox = document.querySelector('.send-area')
         const msgBox = document.querySelector('.message-area')
         if(sendBox.value.trim() && chater) {
-          chater.sendMessage()
+          const message = sendBox.value
           socket.emit('new message', {
-            message: sendBox.value, 
+            message: message, 
             username, 
             userid
           })
+          sendBox.value = ''
         }
       }
 
@@ -183,6 +186,7 @@
         chater = new Chat(userid)
       })
       socket.on('new message', content => {
+        console.log('new message', content)
         const {username, userid, message} = content
         if(chater) {
           chater.addMessage(username, userid, message)
