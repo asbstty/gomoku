@@ -1,67 +1,6 @@
 <html>
   <head>
-    <style>
-      head,body{
-        width: 100%;
-        height: 100%;
-      }
-      .content {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .chat-area {
-        width: 300px;
-        height: 600px;
-        padding: 10px;
-        border: solid 1px gray;
-        margin-left: 50px;
-        box-sizing: border-box;
-        position: relative;
-      }
-      .message-area {
-        width: 100%;
-        height: 450px;
-        padding: 10px;
-        box-sizing: border-box;
-        overflow: auto;
-        word-break: break-all;
-      }
-      .send-area {
-        width: 100%;
-        height: 120px;
-        margin-top: 10px; 
-        padding: 10px 10px 30px 10px;
-      }
-      .btn-send {
-        position: absolute;
-        right: 15px;
-        bottom: 15px;
-        padding: 5px 10px;
-      }
-      .item-chat {
-        width:100%;
-        padding:10px;
-        border-radius: 5px;
-      }
-      .chat-name-mine {
-        color:blue;
-      }
-      .chat-name-other {
-        color:yellow;
-      }
-      .chat-name-system {
-        color:black;
-      }
-      .chat-mine {
-        background-color: rebeccapurple;
-      }
-      .chat-other {
-        background-color: gray;
-      }
-    </style>
+    <link rel="stylesheet" href="chess.css">
   </head>
   <body>
     <div class="content">
@@ -73,89 +12,80 @@
         <textarea class="send-area">
 
         </textarea>
-        <button id="btnSend" class="btn-send" onclick="sendMsg()">
-          发送
-        </button>
+      </div>
+      <button id='btnReady' onclick="getReady()"></button>
+      <div class="login page">
+        <div class="form">
+          <h3 class="title">取个名</h3>
+          <input class="usernameInput" type="text" maxlength="14" />
+        </div>
       </div>
     </div>
   </body>
   <script src="chessboard.js"></script>
   <script src='chat.js'></script>
+  <script src="draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
   <script>
     addEventListener('load', function() {
-      const cvs = document.getElementById('myCanvas')
-      const ctx = cvs.getContext('2d')
-      const sept = 20
-      ctx.fillStyle='black';
-      let xNum = yNum = 1;
-      let curX = curY = sept;
-      initChessBoard();
-      const chessboard = new ChessBoard(xNum, yNum);
-      //画棋盘
-      function initChessBoard() {
-        while(curY + sept < 600) {
-          yNum ++;
-          curY += sept;
-        }
-        while(curX + sept < 900) {
-          xNum ++;
-          curX += sept;
-        }
-        //画横线
-        for(let i = 1 ; i <= yNum; i++) {
-          ctx.moveTo(sept, i * sept);
-          ctx.lineTo(curX, i * sept);
-          ctx.stroke();
-        }
-        //画竖线
-        for(let i = 1; i <= xNum; i++) {
-          ctx.moveTo(i * sept, sept);
-          ctx.lineTo(i * sept, curY);
-          ctx.stroke();
-        }
+      let socket = io('http://www.howieliu.com:3000');
+      let {username, userid} = checkLogin()
+      if(username && userid) {
+        socket.emit('login', {username, userid})
+      } else {
+        username = null
+        userid = null
       }
-      //画棋子
-      function drawChess(x, y, isMe) {
-        ctx.beginPath()
-        ctx.fillStyle = isMe ? 'white' : 'red'
-        const radius = 5
-        ctx.arc(x, y, radius, 0, 2*Math.PI)
-        ctx.fill()
-      }
-      let count = 0
-      cvs.addEventListener('click', function(e) {
-        const {offsetLeft, offsetTop} = cvs
-        const {pageX, pageY} = e
-        let x = pageX - offsetLeft
-        let y = pageY - offsetTop
-        if(x > sept && x < curX && y > sept && y < curY) {
-          x = Math.floor(x / sept) * sept + sept * (x % sept >= sept / 2)
-          y = Math.floor(y / sept) * sept + sept * (y % sept >= sept / 2)
-          const isMe = count % 2
-          drawChess(x, y, isMe)
-          const xIndex = x / sept - 1
-          const yIndex = y / sept - 1
-          if(chessboard.putChess(xIndex, yIndex, isMe)) {
-            if(chessboard.isGameOver(x / sept - 1, y / sept - 1)) {
-              console.log('gameOver!')
-            }
+      const $cvs = document.getElementById('myCanvas')
+      const $loginPage = document.getElementsByClassName('login')[0]
+      const $btnReady = document.getElementById('btnReady')
+      const drawer = new Drawer()
+      const chater = null
+      let playHandler = {}
+      let canPlay = false
+      let gameStatus = 0
+      let imInGame = false //我是否参与了这场游戏
+      Object.defineProperty(playHandler, 'canPlay', {
+        set: function(bool) {
+          canPlay = bool
+          if(bool) {
+            $cvs.style.cursor = 'pointer'
+          } else {
+            $cvs.style.cursor = 'not-allowed'
           }
-          count ++
-        } 
+        },
+        get: function() {
+          return canPlay
+        }
       })
+      Object.defineProperty(playHandler, 'gameStatus', {
+        set: function(status) {
+          gameStatus = status
+          if(status == 0) {    //默认状态
+            $btnReady.display = 'block'
+            $btnReady.innerText = '准备'
+          } else if(status == 0.5) {
+            $btnReady.innerText = '取消准备'
+          } else if(status == 1) {  //游戏中
+            $btnReady.display = 'none'
+          } else {  //游戏结束
+            $btnReady.display = 'none'
+          }
+        },
+        get: function() {
+          return gameStatus
+        }
+      })
+      drawer.initChessBoard();
+      const {sept, curX, curY, xNum, yNum} = drawer;
+      const chessboard = new ChessBoard(xNum, yNum, 'a', 'b');
 
-      cvs.addEventListener('mousemove', throttle(handleMouseMove, 300))
-
-      function handleMouseMove(e) {
-        const {offsetLeft, offsetTop} = cvs
-        const {pageX, pageY} = e
-        let x = pageX - offsetLeft
-        let y = pageY - offsetTop
-        if(x > sept && x < curX && y > sept && y < curY && Math.abs(x % sept - 10) >= 5 && Math.abs(y % sept - 10) >= 5) {
-          cvs.style.cursor = 'pointer'
-        } else {
-          cvs.style.cursor = 'default'
+      function getReady() {
+        const {xNum, yNum} = drawer;
+        if(playHandler.gameStatus == 0) {
+          socket.emit("ready", xNum, yNum)
+        } else if(playHandler.gameStatus == 0.5) {
+          socket.emit('cancel ready', username)
         }
       }
 
@@ -172,29 +102,127 @@
         }
       }
 
-      function debounce(fn, time) {
-        let timeout = null
-        return function() {
-          if(timeout) {
-            clearTimeout(timeout)
+      function checkLogin() {
+        const userid = localStorage.getItem('userid')
+        const username = localStorage.getItem('username')
+        return {userid, username}
+      }
+
+      /**处理页面事件**/
+      $cvs.addEventListener('click', function(e) {
+        if(!playHandler.canPlay) {
+          return
+        }
+        playHandler.canPlay = false
+        const {offsetLeft, offsetTop} = $cvs
+        const {pageX, pageY} = e
+        let x = pageX - offsetLeft
+        let y = pageY - offsetTop
+        if(x > sept && x < curX && y > sept && y < curY) {
+          x = Math.floor(x / sept) * sept + sept * (x % sept >= sept / 2)
+          y = Math.floor(y / sept) * sept + sept * (y % sept >= sept / 2)
+          const xIndex = x / sept - 1
+          const yIndex = y / sept - 1
+          socket.emit('put chess', {x: xIndex, y: yIndex, username})
+        } 
+      })
+
+      $cvs.addEventListener('mousemove', throttle(handleMouseMove, 300))
+
+      addEventListener('keydown', function(e) {
+        console.log('keydown', e)
+        if(e.which === 13) {
+          if(username) {   //聊天消息
+            sendMsg()
+          } else {  //发送登陆消息
+
           }
-          timeout = setTimeout(() => {
-            fn.apply(this, arguments)
-            timeout = null
-          }, time);
+        }
+      })
+
+      function handleMouseMove(e) {
+        if(!playHandler.canPlay) {
+          return 
+        }
+        const {offsetLeft, offsetTop} = $cvs
+        const {pageX, pageY} = e
+        let x = pageX - offsetLeft
+        let y = pageY - offsetTop
+        if(x > sept && x < curX && y > sept && y < curY && Math.abs(x % sept - 10) >= 5 && Math.abs(y % sept - 10) >= 5) {
+          $cvs.style.cursor = 'pointer'
+        } else {
+          $cvs.style.cursor = 'default'
         }
       }
 
       function sendMsg() {
         const sendBox = document.querySelector('.send-area')
         const msgBox = document.querySelector('.message-area')
-        if(sendBox.value.trim()) {
-          const newChatItem = document.createElement('div')
-          newChatItem.innerText = sendBox.value
-          msgBox.appendChild(newChatItem)
-          sendBox.value = ''
+        if(sendBox.value.trim() && chater) {
+          chater.sendMessage()
+          socket.emit('new message', {
+            message: sendBox.value, 
+            username, 
+            userid
+          })
         }
       }
+
+      /**接受socket发送的消息**/
+      socket.on('login fail', message => {
+        alert(message)
+      })
+      socket.on('login suc', data => {
+        username = data.username
+        userid = data.userid
+        $loginPage.style.display = 'none';
+        chater = new Chat(userid)
+      })
+      socket.on('new message', content => {
+        const {username, userid, message} = content
+        if(chater) {
+          chater.addMessage(username, userid, message)
+        }
+      })
+      socket.on('ready suc', data => {  //本人已准备
+        playHandler.gameStatus = 0.5
+      })
+      socket.on('cancel suc', () => {
+        playHandler.gameStatus = 0
+      })
+      socket.on('game start', data => {
+        const {players, curUser} = data
+        playHandler.gameStatus = 1
+        if(players.indexOf(username) > -1) {    //说明是本人参与的游戏
+          imInGame = true
+          if(curUser == username) {
+            playHandler.canPlay = true
+          } else {
+            playHandler.canPlay = false
+          }
+        }
+      })
+      socket.on('put chess', data => {
+        const {x, y, username, userid, color} = data
+        drawer.drawChess(x, y, color)
+      })
+      socket.on('put fail', () => {
+        playHandler.canPlay = true
+      })
+      socket.on('game over', data => {
+        playHandler.gameStatus = 2
+        const {winnerId, winnerName} = data
+        if(imInGame) {
+          if(winnerId == userid) {
+            alert('恭喜获胜！')
+          } else {
+            alert('真是菜啊...')
+          }
+        }
+        imInGame = false
+        playHandler.canPlay = false
+        playHandler.gameStatus = 0
+      })
     })
   </script>
 </html>

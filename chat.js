@@ -17,7 +17,7 @@ class Chat {
     this.msgBox.appendChild(newChatItem)
   }
 
-  sendMessage(username, userid, message) {
+  sendMessage(message) {
     if(sendBox.value.trim()) {
       sendBox.value = ''
     }

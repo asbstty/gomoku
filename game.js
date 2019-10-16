@@ -4,31 +4,31 @@ const ChessBoard = require('./chessboard.js')
 let currentUsers = {}
 let maxUser = 0
 let gameStatus = 0 //0: prepare  1: during
-let chessboard = []
 let readyPool = []
 let chessBoard = null
+let colors = ['white', 'red']
+let curUser = null
 io.on('connection', socket => {
-  socket.on('login', username => {
-    if(currentUsers[username]) {
+  socket.on('login', data => {
+    const {username, userid} = data
+    if(username && userid) {
+      maxUser ++
+      currentUsers[username] = userid
+    } else if(currentUsers[username]) {
       socket.emit('login fail', '用户名已使用')
     } else {
       maxUser ++
       currentUsers[username] = maxUser
       socket.username = username
-      socket.broadcast.emit('user enter', {
-        username: username,
-        userid: currentUsers[username]
-      })
       socket.emit('login suc', {
         username: username,
         userid: currentUsers[username]
       })
+      sendSystemMessage(`${username}进入房间`)
     }
   })
   socket.on('disconnect', () => {
-    socket.broadcast.emit('user left', {
-      username: socket.username
-    })
+    sendSystemMessage(`${username}离开房间`)
     delete currentUsers[socket.username]
   })
 
@@ -40,13 +40,15 @@ io.on('connection', socket => {
       return
     }
     if(readyPool.length == 2) {
+      curUser = Math.random() > 0.5 ? readyPool[0] : readyPool[1]
       socket.broadcast.emit('game start', {
         username,
-        players:readyPool
+        players:readyPool,
+        curUser
       })
       gameStatus = 1
       chessBoard = new ChessBoard(xNum, yNum, ...readyPool)
-      sendSystemMessage('游戏开始！')
+      sendSystemMessage(`游戏开始，当前玩家：${readyPool}`)
     } else {
       socket.emit('ready suc', {
         username,
@@ -70,22 +72,29 @@ io.on('connection', socket => {
 
   socket.on('put chess', data => {
     const {x, y, username} = data
-    if(chessBoard.putChess(x, y, currentUsers[username])) {
-      socket.broadcast.emit('put chess', {
-        x,
-        y,
-        username,
-        userid: currentUsers[username]
-      })
-      if(chessBoard.isGameOver(x, y)) {
-        socket.broadcast.emit('game over', {
-          winnerId: currentUsers[username],
-          winnerName: username
+    if(readyPool.indexOf(username) > -1) {
+      if(chessBoard.putChess(x, y, currentUsers[username])) {
+        socket.broadcast.emit('put chess', {
+          x,
+          y,
+          username,
+          userid: currentUsers[username],
+          color: colors[readyPool.indexOf(username)]
         })
-        gameStatus = 2
-        chessBoard = null
-        readyPool = null
+        if(chessBoard.isGameOver(x, y)) {
+          socket.broadcast.emit('game over', {
+            winnerId: currentUsers[username],
+            winnerName: username
+          })
+          sendSystemMessage(`游戏结束，${winnerName}获胜！`)
+          gameStatus = 2
+          chessBoard = null
+          readyPool = null
+        }
+      } else {
+        socket.emit('put fail')
       }
+    }
   })
 
   socket.on('new message', data => {
