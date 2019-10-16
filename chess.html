@@ -1,0 +1,200 @@
+<html>
+  <head>
+    <style>
+      head,body{
+        width: 100%;
+        height: 100%;
+      }
+      .content {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .chat-area {
+        width: 300px;
+        height: 600px;
+        padding: 10px;
+        border: solid 1px gray;
+        margin-left: 50px;
+        box-sizing: border-box;
+        position: relative;
+      }
+      .message-area {
+        width: 100%;
+        height: 450px;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow: auto;
+        word-break: break-all;
+      }
+      .send-area {
+        width: 100%;
+        height: 120px;
+        margin-top: 10px; 
+        padding: 10px 10px 30px 10px;
+      }
+      .btn-send {
+        position: absolute;
+        right: 15px;
+        bottom: 15px;
+        padding: 5px 10px;
+      }
+      .item-chat {
+        width:100%;
+        padding:10px;
+        border-radius: 5px;
+      }
+      .chat-name-mine {
+        color:blue;
+      }
+      .chat-name-other {
+        color:yellow;
+      }
+      .chat-name-system {
+        color:black;
+      }
+      .chat-mine {
+        background-color: rebeccapurple;
+      }
+      .chat-other {
+        background-color: gray;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <canvas id='myCanvas' width="900" height="600" style="background:gray;"></canvas>
+      <div class="chat-area">
+        <div class="message-area">
+          
+        </div>
+        <textarea class="send-area">
+
+        </textarea>
+        <button id="btnSend" class="btn-send" onclick="sendMsg()">
+          发送
+        </button>
+      </div>
+    </div>
+  </body>
+  <script src="chessboard.js"></script>
+  <script src='chat.js'></script>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+  <script>
+    addEventListener('load', function() {
+      const cvs = document.getElementById('myCanvas')
+      const ctx = cvs.getContext('2d')
+      const sept = 20
+      ctx.fillStyle='black';
+      let xNum = yNum = 1;
+      let curX = curY = sept;
+      initChessBoard();
+      const chessboard = new ChessBoard(xNum, yNum);
+      //画棋盘
+      function initChessBoard() {
+        while(curY + sept < 600) {
+          yNum ++;
+          curY += sept;
+        }
+        while(curX + sept < 900) {
+          xNum ++;
+          curX += sept;
+        }
+        //画横线
+        for(let i = 1 ; i <= yNum; i++) {
+          ctx.moveTo(sept, i * sept);
+          ctx.lineTo(curX, i * sept);
+          ctx.stroke();
+        }
+        //画竖线
+        for(let i = 1; i <= xNum; i++) {
+          ctx.moveTo(i * sept, sept);
+          ctx.lineTo(i * sept, curY);
+          ctx.stroke();
+        }
+      }
+      //画棋子
+      function drawChess(x, y, isMe) {
+        ctx.beginPath()
+        ctx.fillStyle = isMe ? 'white' : 'red'
+        const radius = 5
+        ctx.arc(x, y, radius, 0, 2*Math.PI)
+        ctx.fill()
+      }
+      let count = 0
+      cvs.addEventListener('click', function(e) {
+        const {offsetLeft, offsetTop} = cvs
+        const {pageX, pageY} = e
+        let x = pageX - offsetLeft
+        let y = pageY - offsetTop
+        if(x > sept && x < curX && y > sept && y < curY) {
+          x = Math.floor(x / sept) * sept + sept * (x % sept >= sept / 2)
+          y = Math.floor(y / sept) * sept + sept * (y % sept >= sept / 2)
+          const isMe = count % 2
+          drawChess(x, y, isMe)
+          const xIndex = x / sept - 1
+          const yIndex = y / sept - 1
+          if(chessboard.putChess(xIndex, yIndex, isMe)) {
+            if(chessboard.isGameOver(x / sept - 1, y / sept - 1)) {
+              console.log('gameOver!')
+            }
+          }
+          count ++
+        } 
+      })
+
+      cvs.addEventListener('mousemove', throttle(handleMouseMove, 300))
+
+      function handleMouseMove(e) {
+        const {offsetLeft, offsetTop} = cvs
+        const {pageX, pageY} = e
+        let x = pageX - offsetLeft
+        let y = pageY - offsetTop
+        if(x > sept && x < curX && y > sept && y < curY && Math.abs(x % sept - 10) >= 5 && Math.abs(y % sept - 10) >= 5) {
+          cvs.style.cursor = 'pointer'
+        } else {
+          cvs.style.cursor = 'default'
+        }
+      }
+
+      function throttle(fn, time) {
+        let canInvoke = true
+        return function() {
+          if(canInvoke) {
+            canInvoke = false
+            fn.apply(this, arguments)
+            setTimeout(() => {
+              canInvoke = true
+            }, time);
+          }
+        }
+      }
+
+      function debounce(fn, time) {
+        let timeout = null
+        return function() {
+          if(timeout) {
+            clearTimeout(timeout)
+          }
+          timeout = setTimeout(() => {
+            fn.apply(this, arguments)
+            timeout = null
+          }, time);
+        }
+      }
+
+      function sendMsg() {
+        const sendBox = document.querySelector('.send-area')
+        const msgBox = document.querySelector('.message-area')
+        if(sendBox.value.trim()) {
+          const newChatItem = document.createElement('div')
+          newChatItem.innerText = sendBox.value
+          msgBox.appendChild(newChatItem)
+          sendBox.value = ''
+        }
+      }
+    })
+  </script>
+</html>
