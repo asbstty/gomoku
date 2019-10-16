@@ -8,12 +8,8 @@ let readyPool = []
 let chessBoard = null
 let colors = ['white', 'red']
 let curUser = null
-const roomName = 'room 237'
 io.on('connection', socket => {
-  console.log('new connection>>>')
-  socket.on('test', data => {
-    console.log('test>>>>', data)
-  })
+  console.log('connection>>>', currentUsers)
   socket.on('login', data => {
     console.log('login>>>', data)
     const {username, userid} = data
@@ -35,9 +31,25 @@ io.on('connection', socket => {
     }
   })
   socket.on('disconnect', () => {
-    console.log('disconnect>>>>>>>')
-    sendSystemMessage(`${socket.username}离开房间`)
-    delete currentUsers[socket.username]
+    if(socket.username) {
+      sendSystemMessage(`${socket.username}离开房间`)
+      delete currentUsers[socket.username]
+      if(gameStatus == 1 && readyPool.indexOf(socket.username) > -1) {
+        const leftIndex = readyPool.indexOf(socket.username)
+        const winnerName = readyPool[1 - leftIndex]
+        const winnerId = currentUsers[readyPool[1 - leftIndex]]
+        console.log(`winnerName:${winnerName}, winnerId:${winnerId}`)
+        io.emit('game over', {
+          winnerId,
+          winnerName
+        })
+        gameStatus = 0
+        chessBoard = []
+        readyPool = []
+        sendSystemMessage(`游戏结束，${winnerName}获胜！`)
+      }
+    }
+    console.log('disconnect>>>', currentUsers)
   })
 
   socket.on('ready', data => {
@@ -50,7 +62,7 @@ io.on('connection', socket => {
     }
     if(readyPool.length == 2) {
       curUser = Math.random() > 0.5 ? readyPool[0] : readyPool[1]
-      socket.broadcast.emit('game start', {
+      io.emit('game start', {
         username,
         players:readyPool,
         curUser
@@ -83,20 +95,22 @@ io.on('connection', socket => {
     console.log('put chess>>>', data)
     const {x, y, username} = data
     if(readyPool.indexOf(username) > -1) {
-      if(chessBoard.putChess(x, y, currentUsers[username])) {
-        socket.broadcast.emit('put chess', {
+      if(chessBoard.putChess(x, y, username)) {
+        io.emit('put chess', {
           x,
           y,
           username,
           userid: currentUsers[username],
           color: colors[readyPool.indexOf(username)]
         })
+        console.log(chessBoard.chess)
         if(chessBoard.isGameOver(x, y)) {
-          socket.broadcast.emit('game over', {
+          console.log('game Over>>>>>')
+          io.emit('game over', {
             winnerId: currentUsers[username],
             winnerName: username
           })
-          sendSystemMessage(`游戏结束，${winnerName}获胜！`)
+          sendSystemMessage(`游戏结束，${username}获胜！`)
           gameStatus = 2
           chessBoard = null
           readyPool = null
@@ -108,7 +122,6 @@ io.on('connection', socket => {
   })
 
   socket.on('new message', data => {
-    console.log('new message', data)
     const {message, username, userid} = data
     sendBroadcast(username, userid, message)
   })

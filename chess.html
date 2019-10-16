@@ -29,6 +29,7 @@
   <script>
     addEventListener('load', function() {
       let socket = io('https://www.howieliu.com');
+      // let socket = io('http://localhost:3000');
       let {username, userid} = checkLogin()
       if(username && userid) {
         socket.emit('login', {username, userid})
@@ -36,8 +37,6 @@
         username = null
         userid = null
       }
-      console.log('hhhhhh', socket.emit)
-      socket.emit('test', 'hello')
       const $cvs = document.getElementById('myCanvas')
       const $loginPage = document.getElementsByClassName('login')[0]
       const $btnReady = document.getElementById('btnReady')
@@ -65,14 +64,14 @@
         set: function(status) {
           gameStatus = status
           if(status == 0) {    //默认状态
-            $btnReady.display = 'block'
+            $btnReady.style.display = 'block'
             $btnReady.innerText = '准备'
           } else if(status == 0.5) {
             $btnReady.innerText = '取消准备'
           } else if(status == 1) {  //游戏中
-            $btnReady.display = 'none'
+            $btnReady.style.display = 'none'
           } else {  //游戏结束
-            $btnReady.display = 'none'
+            $btnReady.style.display = 'none'
           }
         },
         get: function() {
@@ -86,7 +85,7 @@
       function getReady() {
         const {xNum, yNum} = drawer;
         if(playHandler.gameStatus == 0) {
-          socket.emit("ready", xNum, yNum)
+          socket.emit("ready", {xNum, yNum, username})
         } else if(playHandler.gameStatus == 0.5) {
           socket.emit('cancel ready', username)
         }
@@ -193,12 +192,15 @@
         }
       })
       socket.on('ready suc', data => {  //本人已准备
+        console.log('ready suc>>>>', data)
         playHandler.gameStatus = 0.5
       })
       socket.on('cancel suc', () => {
         playHandler.gameStatus = 0
       })
       socket.on('game start', data => {
+        console.log('game start>>>>', data)
+        // drawer.clearChess();
         const {players, curUser} = data
         playHandler.gameStatus = 1
         if(players.indexOf(username) > -1) {    //说明是本人参与的游戏
@@ -211,13 +213,19 @@
         }
       })
       socket.on('put chess', data => {
-        const {x, y, username, userid, color} = data
+        console.log('put chess>>>', data)
+        const {x, y, color} = data
         drawer.drawChess(x, y, color)
+        if(userid !== data.userid) {
+          playHandler.canPlay = true
+        }
       })
       socket.on('put fail', () => {
+        console.log('put fail>>>')
         playHandler.canPlay = true
       })
       socket.on('game over', data => {
+        console.log('game over>>>')
         playHandler.gameStatus = 2
         const {winnerId, winnerName} = data
         if(imInGame) {

@@ -36,10 +36,18 @@ class Drawer {
 
   //画棋子
   drawChess(x, y, color) {
+    const realX = (x + 1) * this.sept
+    const realY = (y + 1) * this.sept
     this.ctx.beginPath()
     this.ctx.fillStyle = color
     const radius = 5
-    this.ctx.arc(x, y, radius, 0, 2 * Math.PI)
+    this.ctx.arc(realX, realY, radius, 0, 2 * Math.PI)
     this.ctx.fill()
+  }
+
+  //清空棋子
+  clearChess() {
+    this.cvs.height = this.cvs.height
+    this.initChessBoard()
   }
 }
