@@ -36,6 +36,7 @@
       } else {
         username = null
         userid = null
+        //saveLoginInfo(username, userid)
       }
       const $cvs = document.getElementById('myCanvas')
       const $loginPage = document.getElementsByClassName('login')[0]
@@ -109,6 +110,11 @@
         const username = localStorage.getItem('username')
         return {userid, username}
       }
+      
+      function saveLoginInfo(username, userid) {
+        localStorage.setItem('username', username)
+        localStorage.setItem('userid', userid)
+      }
 
       /**处理页面事件**/
       $cvs.addEventListener('click', function(e) {
@@ -132,6 +138,7 @@
       $cvs.addEventListener('mousemove', throttle(handleMouseMove, 300))
 
       addEventListener('keydown', function(e) {
+        console.log('keydown>>>>', e)
         if(e.which === 13) {
           if(username) {   //聊天消息
             sendMsg()
@@ -179,9 +186,11 @@
         alert(message)
       })
       socket.on('login suc', data => {
+        console.log('loginSuc>>>', data)
         username = data.username
         userid = data.userid
         $loginPage.style.display = 'none';
+        //saveLoginInfo(username, userid)
         chater = new Chat(userid)
       })
       socket.on('new message', content => {
@@ -200,7 +209,7 @@
       })
       socket.on('game start', data => {
         console.log('game start>>>>', data)
-        // drawer.clearChess();
+        drawer.clearChess();
         const {players, curUser} = data
         playHandler.gameStatus = 1
         if(players.indexOf(username) > -1) {    //说明是本人参与的游戏

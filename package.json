@@ -10,5 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "socket.io": "^2.3.0"
+  },
+  "devDependencies": {
+    "fs-extra": "^8.1.0"
   }
 }

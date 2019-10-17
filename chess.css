@@ -53,10 +53,10 @@ head,body{
   color:black;
 }
 .chat-mine {
-  background-color: rebeccapurple;
+  /*background-color: rebeccapurple;*/
 }
 .chat-other {
-  background-color: gray;
+ /* background-color: gray;*/
 }
 /* Login Page */
 .page {

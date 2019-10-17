@@ -1,6 +1,7 @@
 const server = require('http').createServer();
 const io = require('socket.io')(server);
 const ChessBoard = require('./chessboard.js')
+const maxTime = 10 * 60 //一局游戏最多10分钟
 let currentUsers = {}
 let maxUser = 0
 let gameStatus = 0 //0: prepare  1: during
@@ -8,6 +9,7 @@ let readyPool = []
 let chessBoard = null
 let colors = ['white', 'red']
 let curUser = null
+let gameInterval = null
 io.on('connection', socket => {
   console.log('connection>>>', currentUsers)
   socket.on('login', data => {
@@ -26,7 +28,6 @@ io.on('connection', socket => {
         username: username,
         userid: currentUsers[username]
       })
-    //  socket.join(roomName, () => {});
       sendSystemMessage(`${username}进入房间`)
     }
   })
@@ -38,15 +39,7 @@ io.on('connection', socket => {
         const leftIndex = readyPool.indexOf(socket.username)
         const winnerName = readyPool[1 - leftIndex]
         const winnerId = currentUsers[readyPool[1 - leftIndex]]
-        console.log(`winnerName:${winnerName}, winnerId:${winnerId}`)
-        io.emit('game over', {
-          winnerId,
-          winnerName
-        })
-        gameStatus = 0
-        chessBoard = []
-        readyPool = []
-        sendSystemMessage(`游戏结束，${winnerName}获胜！`)
+        announceGameOver(winnerName)
       }
     }
     console.log('disconnect>>>', currentUsers)
@@ -67,6 +60,8 @@ io.on('connection', socket => {
         players:readyPool,
         curUser
       })
+      //todo:添加倒计时
+      //gameInterval = setInterval()
       gameStatus = 1
       chessBoard = new ChessBoard(xNum, yNum, ...readyPool)
       sendSystemMessage(`游戏开始，当前玩家：${readyPool}`)
@@ -105,15 +100,7 @@ io.on('connection', socket => {
         })
         console.log(chessBoard.chess)
         if(chessBoard.isGameOver(x, y)) {
-          console.log('game Over>>>>>')
-          io.emit('game over', {
-            winnerId: currentUsers[username],
-            winnerName: username
-          })
-          sendSystemMessage(`游戏结束，${username}获胜！`)
-          gameStatus = 2
-          chessBoard = null
-          readyPool = null
+          announceGameOver(username)
         }
       } else {
         socket.emit('put fail')
@@ -125,6 +112,21 @@ io.on('connection', socket => {
     const {message, username, userid} = data
     sendBroadcast(username, userid, message)
   })
+
+  function resetState() {
+    gameStatus = 0
+    chessBoard = null
+    readyPool = []
+  }
+
+  function announceGameOver(username) {
+    io.emit('game over', {
+      winnerId: currentUsers[username],
+      winnerName: username
+    })
+    sendSystemMessage(`游戏结束，${username}获胜！`)
+    resetState()
+  }
 
   function sendSystemMessage(message) {
     sendBroadcast(

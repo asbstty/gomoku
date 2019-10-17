@@ -47,7 +47,7 @@ class Drawer {
 
   //清空棋子
   clearChess() {
-    this.cvs.height = this.cvs.height
+    this.ctx.clearRect(0, 0, this.cvs.width, this.cvs.height)
     this.initChessBoard()
   }
 }
