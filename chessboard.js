@@ -14,6 +14,11 @@ class ChessBoard {
       [player1]: -1,
       [player2]: 1
     }
+    this.map = {
+      '-1': player1,
+      '1': player2,
+      '0':''
+    }
     this.initChess()
   }
 
@@ -23,12 +28,23 @@ class ChessBoard {
     })
   }
 
-  putChess(x, y, userid) {
+  putChess(x, y, username) {
     if(!this.chess[y][x]) {
-      this.chess[y][x] = this.players[userid]
+      this.chess[y][x] = this.players[username]
       return true
     }
     return false
+  }
+
+  getFormatBoard() {
+    const result = this.chess.map(item => {
+      const innerArray = item.map(inner => {
+        return this.map[inner]
+      })
+      return innerArray
+    })
+    console.log('getFormatBoard>>>', result)
+    return result
   }
 
   isGameOver(x, y) {
